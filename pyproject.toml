@@ -1,0 +1,47 @@
+[tool.poetry]
+name = "bank-fixtures"
+version = "0.1.0"
+description = ""
+authors = ["maks_kras <maksym_krasovskiy@ya.ru>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.13"
+poetry-core = "^2.2.1"
+pandas = "^2.3.3"
+openpyxl = "^3.1.5"
+requests = "^2.32.5"
+python-dotenv = "^1.2.1"
+
+
+[tool.poetry.group.dev.dependencies]
+requests = "^2.32.5"
+
+
+[tool.poetry.group.lint.dependencies]
+flake8 = "^7.3.0"
+mypy = "^1.18.2"
+black = "^25.9.0"
+isort = "^7.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 119
+exclude = '''
+(
+    /(
+        | \.git
+    )/
+)
+'''
+
+[tool.mypy]
+disallow-untyped-defs = true
+warn-return-any = true
+exclude = 'venv'
+
+[tool.isort]
+line_length = 119
