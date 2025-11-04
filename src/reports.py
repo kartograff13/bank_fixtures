@@ -28,7 +28,6 @@ def report_decorator(filename: Optional[str] = None, avoid_duplicates: bool = Tr
                 if isinstance(result, pd.DataFrame):
                     new_records = result.to_dict("records")
                     timestamp = datetime.now().isoformat()
-
                     for record in new_records:
                         record["_timestamp"] = timestamp
                         record["_report_type"] = func.__name__
@@ -51,24 +50,19 @@ def report_decorator(filename: Optional[str] = None, avoid_duplicates: bool = Tr
                         except (json.JSONDecodeError, Exception) as e:
                             print(f"Ошибка чтения существующего файла: {e}")
                             existing_data = []
-
                     if avoid_duplicates and existing_data:
                         existing_hashes = {r.get("_hash") for r in existing_data if "_hash" in r}
                         new_records = [r for r in new_records if r.get("_hash") not in existing_hashes]
-
                     if new_records:
                         combined_data = existing_data + new_records
-
                         with open(output_filename, "w", encoding="utf-8") as f:
                             json.dump(combined_data, f, ensure_ascii=False, indent=2)
-
                         action = "Дополнен" if existing_data else "Создан"
                         print(
                             f"{action} отчет: {output_filename} (+{len(new_records)} записей, всего: {len(combined_data)})"
                         )
                     else:
                         print(f"Отчет {output_filename} уже содержит эти данные, дополнение не требуется")
-
                 else:
                     existing_data = []
                     if os.path.exists(output_filename):
@@ -77,21 +71,16 @@ def report_decorator(filename: Optional[str] = None, avoid_duplicates: bool = Tr
                                 existing_data = json.load(f)
                         except (json.JSONDecodeError, Exception):
                             existing_data = []
-
                     timestamp = datetime.now().isoformat()
                     new_record = {"_timestamp": timestamp, "_report_type": func.__name__, "data": result}
-
                     combined_data = existing_data + [new_record]
-
                     with open(output_filename, "w", encoding="utf-8") as f:
                         json.dump(combined_data, f, ensure_ascii=False, indent=2)
 
                     action = "Дополнен" if existing_data else "Создан"
                     print(f"{action} отчет: {output_filename}")
-
             except Exception as e:
                 print(f"Ошибка сохранения отчета {func.__name__}: {e}")
-
             return result
 
         return wrapper
@@ -108,13 +97,11 @@ def spending_by_category(transactions: pd.DataFrame, category: str, date: Option
         end_date = datetime.strptime(date, "%Y-%m-%d")
 
     start_date = end_date - timedelta(days=90)
-
     filtered_data = transactions[
         (transactions["Дата операции"] >= start_date)
         & (transactions["Дата операции"] <= end_date)
         & (transactions["Категория"] == category)
     ]
-
     if filtered_data.empty:
         return pd.DataFrame()
 
@@ -136,13 +123,12 @@ def spending_by_weekday(transactions: pd.DataFrame, date: Optional[str] = None) 
     start_date = end_date - timedelta(days=90)
     filtered_data = transactions[
         (transactions["Дата операции"] >= start_date) & (transactions["Дата операции"] <= end_date)
-    ]
-
+    ].copy()
     if filtered_data.empty:
         return pd.DataFrame()
 
-    filtered_data["День недели"] = filtered_data["Дата операции"].dt.day_name()
-    filtered_data["Сумма"] = filtered_data["Сумма операции"].abs()
+    filtered_data.loc[:, "День недели"] = filtered_data["Дата операции"].dt.day_name()
+    filtered_data.loc[:, "Сумма"] = filtered_data["Сумма операции"].abs()
 
     weekday_mapping = {
         "Monday": "Понедельник",
@@ -154,7 +140,7 @@ def spending_by_weekday(transactions: pd.DataFrame, date: Optional[str] = None) 
         "Sunday": "Воскресенье",
     }
 
-    filtered_data["День недели"] = filtered_data["День недели"].map(weekday_mapping)
+    filtered_data.loc[:, "День недели"] = filtered_data["День недели"].map(weekday_mapping)
     avg_spending = filtered_data.groupby("День недели")["Сумма"].mean().reset_index()
 
     return avg_spending
@@ -169,18 +155,16 @@ def spending_by_workday(transactions: pd.DataFrame, date: Optional[str] = None) 
         end_date = datetime.strptime(date, "%Y-%m-%d")
 
     start_date = end_date - timedelta(days=90)
-
     filtered_data = transactions[
         (transactions["Дата операции"] >= start_date) & (transactions["Дата операции"] <= end_date)
-    ]
-
+    ].copy()
     if filtered_data.empty:
         return pd.DataFrame()
 
-    filtered_data["День типа"] = filtered_data["Дата операции"].dt.weekday.apply(
+    filtered_data.loc[:, "День типа"] = filtered_data["Дата операции"].dt.weekday.apply(
         lambda x: "Выходной" if x >= 5 else "Рабочий"
     )
-    filtered_data["Сумма"] = filtered_data["Сумма операции"].abs()
+    filtered_data.loc[:, "Сумма"] = filtered_data["Сумма операции"].abs()
     avg_spending = filtered_data.groupby("День типа")["Сумма"].mean().reset_index()
 
     return avg_spending
