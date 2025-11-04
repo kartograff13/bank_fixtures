@@ -7,7 +7,7 @@ import pandas as pd
 
 
 def profitable_cashback_categories(data: list[dict[str, Any]], year: int, month: int) -> dict[str, float]:
-    """Анализ выгодности категорий повышенного кешбэка"""
+    """Функция анализа выгодности категорий повышенного кешбэка"""
 
     def filter_by_date(transaction: dict[str, Any]) -> bool:
         if "Дата операции" not in transaction or transaction["Дата операции"] is None:
@@ -54,7 +54,7 @@ def profitable_cashback_categories(data: list[dict[str, Any]], year: int, month:
 
 
 def investment_bank(month: str, transactions: list[dict[str, Any]], limit: int) -> float:
-    """Расчет суммы для инвесткопилки через округление"""
+    """Функция для расчета суммы для инвесткопилки через округление"""
     try:
         year, month_num = map(int, month.split("-"))
     except ValueError:
@@ -105,7 +105,7 @@ def investment_bank(month: str, transactions: list[dict[str, Any]], limit: int) 
 
 
 def simple_search(transactions: list[dict[str, Any]], search_query: str) -> list[dict[str, Any]]:
-    """Простой поиск по описанию и категории"""
+    """Функция простого поиска по описанию и категории"""
 
     def matches_query(transaction: dict[str, Any]) -> bool:
         description = str(transaction.get("Описание", "")).lower()
@@ -117,7 +117,7 @@ def simple_search(transactions: list[dict[str, Any]], search_query: str) -> list
 
 
 def search_phone_numbers(transactions: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Поиск транзакций с телефонными номерами"""
+    """Функция поиска транзакций с телефонными номерами"""
     phone_pattern = r"(\+7|8)[\s\-]?\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2}"
 
     def has_phone_number(transaction: dict[str, Any]) -> bool:
@@ -128,7 +128,7 @@ def search_phone_numbers(transactions: list[dict[str, Any]]) -> list[dict[str, A
 
 
 def search_person_transfers(transactions: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Поиск переводов физическим лицам"""
+    """Функция поиска переводов физическим лицам"""
     name_pattern = r"[А-Я][а-я]+\s[А-Я]\."
 
     def is_person_transfer(transaction: dict[str, Any]) -> bool:

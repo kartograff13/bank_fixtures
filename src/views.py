@@ -164,7 +164,6 @@ def main_page_data(transactions: pd.DataFrame, date_time: str) -> dict[str, Any]
             expenses = card_transactions[card_transactions["Сумма операции"] < 0]
             total_spent = float(expenses["Сумма операции"].abs().sum())
             cashback = total_spent * 0.01
-
             cards_data.append(
                 {
                     "last_digits": str(card)[-4:],
@@ -215,7 +214,6 @@ def main_page_data(transactions: pd.DataFrame, date_time: str) -> dict[str, Any]
 def events_page_data(transactions: pd.DataFrame, date_time: str, period: str = "M") -> dict[str, Any]:
     """Функция генерации данных для страницы событий с учетом реальной структуры данных"""
     settings = load_user_settings()
-
     start_date, end_date = get_date_range(date_time, period)
     filtered_transactions = filter_transactions_by_date(transactions, start_date, end_date)
     expenses_data = filtered_transactions[filtered_transactions["Сумма операции"] < 0].copy()

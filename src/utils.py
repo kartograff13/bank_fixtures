@@ -119,9 +119,7 @@ def get_greeting_by_time(hour: int) -> str:
 def convert_dataframe_to_dict_list(df: pd.DataFrame) -> list[dict[str, Any]]:
     """Функция конвертации DataFrame в список словарей для сервисов"""
     df_clean = df.where(pd.notnull(df), None)
-
     records = df_clean.to_dict("records")
-
     result: list[dict[str, Any]] = []
     for record in records:
         string_key_record: dict[str, Any] = {}
