@@ -1,6 +1,7 @@
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
+from unittest.mock import patch
 
 import pandas as pd
 import pytest
@@ -141,3 +142,103 @@ def test_spending_functions_with_specific_date(sample_transactions: pd.DataFrame
     assert isinstance(result1, pd.DataFrame)
     assert isinstance(result2, pd.DataFrame)
     assert isinstance(result3, pd.DataFrame)
+
+
+def test_report_decorator_handles_json_decode_error(tmp_path: Path) -> None:
+    """Тест обработки ошибки JSONDecodeError при чтении существующего файла"""
+    test_file = tmp_path / "test_report.json"
+
+    # Создаем битый JSON файл
+    with open(test_file, "w") as f:
+        f.write("{ invalid json }")
+
+    @report_decorator(filename=str(test_file))
+    def test_func() -> pd.DataFrame:
+        return pd.DataFrame({"col1": [5, 6], "col2": [7, 8]})
+
+    result = test_func()
+
+    assert not result.empty
+    assert test_file.exists()
+
+    with open(test_file, "r") as f:
+        data = json.load(f)
+
+    assert len(data) == 2
+    assert data[0]["col1"] == 5
+
+
+def test_report_decorator_handles_general_exception_when_reading(tmp_path: Path) -> None:
+    """Тест обработки общего исключения при чтении существующего файла"""
+    test_file = tmp_path / "test_report.json"
+
+    with patch("builtins.open", side_effect=Exception("Test read error")):
+
+        @report_decorator(filename=str(test_file))
+        def test_func() -> pd.DataFrame:
+            return pd.DataFrame({"col1": [9, 10], "col2": [11, 12]})
+
+        result = test_func()
+
+        assert not result.empty
+
+
+def test_report_decorator_handles_general_exception_when_writing(tmp_path: Path) -> None:
+    """Тест обработки общего исключения при записи файла"""
+    test_file = tmp_path / "test_report.json"
+
+    with patch("builtins.open", side_effect=Exception("Test write error")):
+
+        @report_decorator(filename=str(test_file))
+        def test_func() -> pd.DataFrame:
+            return pd.DataFrame({"col1": [13, 14], "col2": [15, 16]})
+
+        result = test_func()
+
+        assert not result.empty
+
+
+def test_report_decorator_handles_non_list_json_content(tmp_path: Path) -> None:
+    """Тест обработки случая, когда JSON файл существует, но содержит не список"""
+    test_file = tmp_path / "test_report.json"
+
+    with open(test_file, "w") as f:
+        json.dump({"not": "a list"}, f)
+
+    @report_decorator(filename=str(test_file))
+    def test_func() -> pd.DataFrame:
+        return pd.DataFrame({"col1": [17, 18], "col2": [19, 20]})
+
+    result = test_func()
+
+    assert not result.empty
+    assert test_file.exists()
+
+    with open(test_file, "r") as f:
+        data = json.load(f)
+
+    assert isinstance(data, list)
+    assert len(data) == 2
+
+
+def test_report_decorator_with_non_dataframe_handles_json_error(tmp_path: Path) -> None:
+    """Тест обработки ошибки JSON для не-DataFrame результатов"""
+    test_file = tmp_path / "test_report.json"
+
+    with open(test_file, "w") as f:
+        f.write("{ invalid json }")
+
+    @report_decorator(filename=str(test_file))
+    def test_func() -> dict:
+        return {"new_key": "new_value"}
+
+    result = test_func()
+
+    assert result == {"new_key": "new_value"}
+    assert test_file.exists()
+
+    with open(test_file, "r") as f:
+        data = json.load(f)
+
+    assert len(data) == 1
+    assert data[0]["data"] == {"new_key": "new_value"}
