@@ -59,7 +59,8 @@ def report_decorator(filename: Optional[str] = None, avoid_duplicates: bool = Tr
                             json.dump(combined_data, f, ensure_ascii=False, indent=2)
                         action = "Дополнен" if existing_data else "Создан"
                         print(
-                            f"{action} отчет: {output_filename} (+{len(new_records)} записей, всего: {len(combined_data)})"
+                            f"{action} отчет: {output_filename} (+{len(new_records)} записей, "
+                            f"всего: {len(combined_data)})"
                         )
                     else:
                         print(f"Отчет {output_filename} уже содержит эти данные, дополнение не требуется")
@@ -101,7 +102,8 @@ def spending_by_category(transactions: pd.DataFrame, category: str, date: Option
         (transactions["Дата операции"] >= start_date)
         & (transactions["Дата операции"] <= end_date)
         & (transactions["Категория"] == category)
-    ]
+    ].copy()
+
     if filtered_data.empty:
         return pd.DataFrame()
 
@@ -124,6 +126,7 @@ def spending_by_weekday(transactions: pd.DataFrame, date: Optional[str] = None) 
     filtered_data = transactions[
         (transactions["Дата операции"] >= start_date) & (transactions["Дата операции"] <= end_date)
     ].copy()
+
     if filtered_data.empty:
         return pd.DataFrame()
 
