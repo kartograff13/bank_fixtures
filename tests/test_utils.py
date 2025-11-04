@@ -2,6 +2,7 @@ import json
 import os
 import tempfile
 from datetime import datetime
+from typing import Any
 from unittest.mock import patch
 
 import numpy as np
@@ -231,16 +232,18 @@ def test_convert_dataframe_to_dict_list() -> None:
     """Тест конвертации DataFrame в список словарей"""
     df = pd.DataFrame({"col1": [1, 2, None], "col2": ["A", "B", "C"]})
 
-    result = convert_dataframe_to_dict_list(df)
+    result: list[dict[str, Any]] = convert_dataframe_to_dict_list(df)
 
-    expected = [
+    expected: list[dict[str, Any]] = [
         {"col1": 1, "col2": "A"},
         {"col1": 2, "col2": "B"},
         {"col1": None, "col2": "C"},
     ]
 
     assert len(result) == len(expected)
-    for i, (res_dict, exp_dict) in enumerate(zip(result, expected)):
+    for i in range(len(expected)):
+        res_dict: dict[str, Any] = result[i]
+        exp_dict: dict[str, Any] = expected[i]
         for key in exp_dict:
             if exp_dict[key] is None and res_dict[key] is None:
                 continue
@@ -259,7 +262,7 @@ def test_convert_dataframe_to_dict_list_with_nan() -> None:
         }
     )
 
-    result = convert_dataframe_to_dict_list(df)
+    result: list[dict[str, Any]] = convert_dataframe_to_dict_list(df)
 
     assert result[0]["numeric_col"] == 1.0
     assert pd.isna(result[1]["numeric_col"])
