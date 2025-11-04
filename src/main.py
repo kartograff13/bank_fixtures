@@ -1,181 +1,214 @@
 import json
-
-import pandas as pd
+import os
+import sys
+from typing import Optional
 
 from src.reports import spending_by_category, spending_by_weekday, spending_by_workday
-from src.services import (investment_bank, profitable_cashback_categories, search_person_transfers,
-                          search_phone_numbers, simple_search)
-from src.utils import convert_dataframe_to_dict_list, load_transactions, load_user_settings, prepare_transactions_data
+from src.services import (
+    investment_bank,
+    profitable_cashback_categories,
+    search_person_transfers,
+    search_phone_numbers,
+    simple_search,
+)
+from src.utils import convert_dataframe_to_dict_list, load_transactions
 from src.views import events_page_data, main_page_data
 
 
+def find_data_file() -> Optional[str]:
+    """Функция для поиска файла с данными в разных возможных расположениях"""
+    possible_paths = [
+        "data/operations.xlsx",
+        "../data/operations.xlsx",
+        "./data/operations.xlsx",
+        "operations.xlsx",
+    ]
+
+    for path in possible_paths:
+        if os.path.exists(path):
+            print(f"Найден файл данных: {path}")
+            return path
+
+    print("\n✗ Файл operations.xlsx не найден. Поиск в директориях:")
+    for root, dirs, files in os.walk("."):
+        for file in files:
+            if file.endswith(".xlsx"):
+                print(f"  Найден: {os.path.join(root, file)}")
+
+    print("\nРекомендации:")
+    print("1. Поместите файл operations.xlsx в папку data/ в корне проекта")
+    print("2. Или укажите правильный путь к файлу в функции load_transactions()")
+    print("3. Убедитесь, что файл существует и доступен для чтения")
+
+    return None
+
+
 def main() -> None:
-    """Главная функция для демонстрации работы всех модулей с ограниченными данными"""
+    """Главная функция для демонстрации работы проекта"""
+    print("=" * 60)
+    print("ДЕМОНСТРАЦИЯ РАБОТЫ ПРОЕКТА АНАЛИЗА БАНКОВСКИХ ОПЕРАЦИЙ")
+    print("=" * 60)
 
-    print("=" * 50)
-    print("БАНКОВСКИЙ АНАЛИЗАТОР - ДЕМОНСТРАЦИЯ РАБОТЫ")
-    print("=" * 50)
-    print("\n1. ЗАГРУЗКА ДАННЫХ...")
+    print("\n1. ЗАГРУЗКА ДАННЫХ")
+    print("-" * 40)
 
-    transactions_df = load_transactions()
+    data_file_path = find_data_file()
+
+    if not data_file_path:
+        print("\nОШИБКА: Файл с данными не найден.")
+        print("Программа не может продолжить работу без файла operations.xlsx")
+        sys.exit(1)
+
+    transactions_df = load_transactions(data_file_path)
+    print(f"Загружено транзакций: {len(transactions_df)}")
+
     if transactions_df.empty:
-        print("Не удалось загрузить данные транзакций")
-        return
-
-    if len(transactions_df) > 20:
-        transactions_df = transactions_df.head(20)
-        print(f"Загружено первых 20 транзакций из {len(load_transactions())} доступных")
-    else:
-        print(f"Загружено {len(transactions_df)} транзакций")
-
-    settings = load_user_settings()
-    print(f"Загружены настройки: {settings}")
+        print("ОШИБКА: Не удалось загрузить транзакции или файл пуст")
+        sys.exit(1)
 
     transactions_list = convert_dataframe_to_dict_list(transactions_df)
-    target_date = "2021-12-31 14:30:00"
-    january_transactions = prepare_transactions_data(transactions_df, target_date, "M")
-    january_transactions_list = convert_dataframe_to_dict_list(january_transactions)
+    print(f"Сконвертировано записей для сервисов: {len(transactions_list)}")
 
-    print(f"Подготовлены данные за период: {target_date}")
-    print("\n" + "=" * 50)
-    print("2. МОДУЛЬ VIEWS (ВИЗУАЛИЗАЦИЯ)")
-    print("=" * 50)
-    print("\nГЛАВНАЯ СТРАНИЦА:")
+    print("\nПервые 5 транзакций:")
+    print("-" * 80)
+    for i, transaction in enumerate(transactions_list[:5]):
+        date_str = transaction.get("Дата операции", "Нет даты")
+        description = transaction.get("Описание", "Нет описания")
+        amount = transaction.get("Сумма операции", 0)
+        category = transaction.get("Категория", "Не указана")
 
-    main_data = main_page_data(transactions_df, target_date)
-    print(f"   Приветствие: {main_data['greeting']}")
-    print(f"   Карты: {len(main_data['cards'])}")
+        print(f"{i + 1}. Дата: {date_str}")
+        print(f"   Описание: {description}")
+        print(f"   Сумма: {amount} руб.")
+        print(f"   Категория: {category}")
+        print(f"   Карта: {transaction.get('Номер карты', 'Не указана')}")
+        print("-" * 80)
 
-    for card in main_data["cards"]:
-        print(
-            f"     Карта ***{card['last_digits']}: {card['total_spent']} руб. потрачено, кешбэк: {card['cashback']} руб."
-        )
-    print(f"   Топ транзакций: {len(main_data['top_transactions'])}")
-    print(f"   Курсы валют: {len(main_data['currency_rates'])}")
-    print(f"   Цены акций: {len(main_data['stock_prices'])}")
-    print("\nСТРАНИЦА СОБЫТИЙ:")
+    print("\n2. ОТЧЕТЫ")
+    print("-" * 40)
 
-    events_data = events_page_data(transactions_df, target_date, "M")
-    print(f"   Общие расходы: {events_data['expenses']['total']} руб.")
-    print(f"   Общие поступления: {events_data['income']['total']} руб.")
-    print(f"   Основные категории расходов: {len(events_data['expenses']['main_categories'])}")
-    print("\n" + "=" * 50)
-    print("3. МОДУЛЬ SERVICES (СЕРВИСЫ АНАЛИЗА)")
-    print("=" * 50)
-    print("\nАНАЛИЗ КЕШБЭКА:")
+    report_date = "2021-12-31"
 
-    cashback_categories = profitable_cashback_categories(january_transactions_list, 2021, 12)
-    if cashback_categories:
-        for category, cashback in list(cashback_categories.items())[:3]:
-            print(f"   {category}: {cashback:.2f} руб. кешбэка")
+    print(f"\nОтчет по тратам в категории 'Супермаркеты' на {report_date}:")
+    supermarket_report = spending_by_category(transactions_df, "Супермаркеты", report_date)
+    if not supermarket_report.empty:
+        print(supermarket_report.to_string(index=False))
     else:
-        print("   Нет данных по кешбэку")
+        print("Нет данных за указанный период")
 
-    print("\nИНВЕСТКОПИЛКА:")
+    print(f"\nСредние траты по дням недели на {report_date}:")
+    weekday_report = spending_by_weekday(transactions_df, report_date)
+    if not weekday_report.empty:
+        print(weekday_report.to_string(index=False))
+    else:
+        print("Нет данных для отчета по дням недели")
 
-    investment = investment_bank("2021-12", january_transactions_list, 50)
-    print(f"   Сумма для инвесткопилки за декабрь 2021: {investment:.2f} руб.")
-    print("\nПОИСК ТРАНЗАКЦИЙ:")
+    print(f"\nСредние траты по типам дней на {report_date}:")
+    workday_report = spending_by_workday(transactions_df, report_date)
+    if not workday_report.empty:
+        print(workday_report.to_string(index=False))
+    else:
+        print("Нет данных для отчета по типам дней")
 
-    search_results = simple_search(transactions_list, "магазин")
-    print(f"   Найдено по запросу 'магазин': {len(search_results)} транзакций")
+    print("\n3. СЕРВИСЫ")
+    print("-" * 40)
+
+    analysis_year = 2021
+    analysis_month = 12
+
+    cashback_analysis = profitable_cashback_categories(transactions_list, analysis_year, analysis_month)
+    print(f"\nАнализ кешбэка за {analysis_month}/{analysis_year}:")
+    if cashback_analysis:
+        for category, cashback in list(cashback_analysis.items())[:5]:
+            print(f"  {category}: {cashback:.2f} руб.")
+    else:
+        print("  Нет данных для анализа кешбэка")
+
+    investment_month = "2021-12"
+    investment_amount = investment_bank(investment_month, transactions_list, 10)
+    print(f"\nСумма для инвесткопилки ({investment_month}): {investment_amount:.2f} руб.")
+
+    search_results = simple_search(transactions_list, "Магнит")
+    print(f"\nПоиск по 'Магнит': найдено {len(search_results)} транзакций")
+    for i, transaction in enumerate(search_results[:3]):
+        print(
+            f"  {i + 1}. {transaction.get('Дата операции')} - "
+            f"{transaction.get('Сумма операции')} руб. - "
+            f"{transaction.get('Описание')}"
+        )
 
     phone_transactions = search_phone_numbers(transactions_list)
-    print(f"   Транзакций с телефонными номерами: {len(phone_transactions)}")
+    print(f"\nТранзакции с телефонными номерами: {len(phone_transactions)}")
+    for i, transaction in enumerate(phone_transactions[:2]):
+        print(f"  {i + 1}. {transaction.get('Дата операции')} - {transaction.get('Описание')}")
 
     person_transfers = search_person_transfers(transactions_list)
-    print(f"   Переводов физическим лицам: {len(person_transfers)}")
-    print("\n" + "=" * 50)
-    print("4. МОДУЛЬ REPORTS (ОТЧЕТЫ)")
-    print("=" * 50)
-    print("\nОТЧЕТЫ ПО КАТЕГОРИЯМ:")
+    print(f"Переводы физическим лицам: {len(person_transfers)}")
+    for i, transaction in enumerate(person_transfers[:2]):
+        print(
+            f"  {i + 1}. {transaction.get('Дата операции')} - "
+            f"{transaction.get('Описание')} - "
+            f"{transaction.get('Сумма операции')} руб."
+        )
 
-    category_report = spending_by_category(transactions_df, "Супермаркеты", "2021-12-31")
-    if not category_report.empty:
-        print("   Траты по категории 'Супермаркеты' за 3 месяца:")
-        for _, row in category_report.iterrows():
-            amount_value = row["Сумма операции"]
-            if pd.notna(amount_value):
-                amount = abs(float(amount_value.item()))
-            else:
-                amount = 0.0
-            month_value = row["Месяц"]
-            month_str = str(month_value) if pd.notna(month_value) else "Нет данных"
-            print(f"     {month_str}: {amount:.2f} руб.")
+    print("\n4. ПРЕДСТАВЛЕНИЯ (VIEWS)")
+    print("-" * 40)
+
+    analysis_datetime = "2021-12-31 23:59:59"
+    main_data = main_page_data(transactions_df, analysis_datetime)
+
+    print(f"\nГлавная страница - {main_data['greeting']}:")
+    print(f"Карты: {len(main_data['cards'])}")
+    for card in main_data["cards"][:3]:
+        print(
+            f"  Карта *{card['last_digits']}: потрачено {card['total_spent']} руб., " f"кешбэк {card['cashback']} руб."
+        )
+
+    print(f"Топ транзакций: {len(main_data['top_transactions'])}")
+    for i, transaction in enumerate(main_data["top_transactions"][:3]):
+        print(f"  {i + 1}. {transaction['date']} - {transaction['amount']} руб. - {transaction['category']}")
+
+    print(f"Курсы валют: {len(main_data['currency_rates'])}")
+    for rate in main_data["currency_rates"][:3]:
+        print(f"  {rate['currency']}: {rate['rate']} руб.")
+
+    print(f"Цены акций: {len(main_data['stock_prices'])}")
+    for stock in main_data["stock_prices"][:3]:
+        print(f"  {stock['stock']}: {stock['price']} $")
+
+    events_data = events_page_data(transactions_df, analysis_datetime, "M")
+    print("\nСтраница событий:")
+    print(f"Общие расходы: {events_data['expenses']['total']} руб.")
+    print("Основные категории расходов:")
+    for category, amount in list(events_data["expenses"]["main_categories"].items())[:5]:
+        print(f"  {category}: {amount} руб.")
+
+    print(f"Общие доходы: {events_data['income']['total']} руб.")
+    if events_data["income"]["main_categories"]:
+        print("Основные категории доходов:")
+        for category, amount in list(events_data["income"]["main_categories"].items())[:3]:
+            print(f"  {category}: {amount} руб.")
     else:
-        print("   Нет данных по категории 'Супермаркеты'")
+        print("Нет данных по доходам")
 
-    print("\nОТЧЕТ ПО ДНЯМ НЕДЕЛИ:")
+    print("\n5. СОХРАНЕНИЕ РЕЗУЛЬТАТОВ")
+    print("-" * 40)
 
-    weekday_report = spending_by_weekday(transactions_df, "2021-12-31")
-    if not weekday_report.empty:
-        print("   Средние траты по дням недели:")
-        for _, row in weekday_report.iterrows():
-            amount_value = row["Сумма"]
-            if pd.notna(amount_value):
-                amount = float(amount_value.item())
-            else:
-                amount = 0.0
-            day_value = row["День недели"]
-            day_str = str(day_value) if pd.notna(day_value) else "Нет данных"
-            print(f"     {day_str}: {amount:.2f} руб.")
-    else:
-        print("   Нет данных для анализа по дням недели")
+    with open("main_page_example.json", "w", encoding="utf-8") as f:
+        json.dump(main_data, f, ensure_ascii=False, indent=2, default=str)
+    print("Пример главной страницы сохранен в main_page_example.json")
 
-    print("\nОТЧЕТ ПО ТИПАМ ДНЕЙ:")
+    with open("events_page_example.json", "w", encoding="utf-8") as f:
+        json.dump(events_data, f, ensure_ascii=False, indent=2, default=str)
+    print("Пример страницы событий сохранен в events_page_example.json")
 
-    workday_report = spending_by_workday(transactions_df, "2021-12-31")
-    if not workday_report.empty:
-        print("   Средние траты по типам дней:")
-        for _, row in workday_report.iterrows():
-            amount_value = row["Сумма"]
-            if pd.notna(amount_value):
-                amount = float(amount_value.item())
-            else:
-                amount = 0.0
-            day_type_value = row["День типа"]
-            day_type_str = str(day_type_value) if pd.notna(day_type_value) else "Нет данных"
-            print(f"     {day_type_str}: {amount:.2f} руб.")
-    else:
-        print("   Нет данных для анализа по типам дней")
+    if "supermarket_report" in locals() and not supermarket_report.empty:
+        supermarket_report.to_json("supermarket_report_example.json", orient="records", force_ascii=False, indent=2)
+        print("Пример отчета по супермаркетам сохранен в supermarket_report_example.json")
 
-    print("\n" + "=" * 50)
-    print("5. СОХРАНЕНИЕ РЕЗУЛЬТАТОВ")
-    print("=" * 50)
-
-    try:
-        with open("demo_main_page.json", "w", encoding="utf-8") as f:
-            json.dump(main_data, f, ensure_ascii=False, indent=2)
-        print("Данные главной страницы сохранены в demo_main_page.json")
-
-        with open("demo_events_page.json", "w", encoding="utf-8") as f:
-            json.dump(events_data, f, ensure_ascii=False, indent=2)
-        print("Данные страницы событий сохранены в demo_events_page.json")
-
-        with open("demo_services.json", "w", encoding="utf-8") as f:
-            services_data = {
-                "cashback_categories": cashback_categories,
-                "investment": investment,
-                "search_results_count": len(search_results),
-                "phone_transactions_count": len(phone_transactions),
-                "person_transfers_count": len(person_transfers),
-            }
-            json.dump(services_data, f, ensure_ascii=False, indent=2)
-        print("Данные сервисов сохранены в demo_services.json")
-
-    except Exception as e:
-        print(f"Ошибка сохранения демо-данных: {e}")
-
-    print("\n" + "=" * 50)
+    print("\n" + "=" * 60)
     print("ДЕМОНСТРАЦИЯ ЗАВЕРШЕНА!")
-    print("=" * 50)
-    print("\nСозданные файлы:")
-    print("- report_spending_by_category.json")
-    print("- report_spending_by_weekday.json")
-    print("- report_spending_by_workday.json")
-    print("- demo_main_page.json")
-    print("- demo_events_page.json")
-    print("- demo_services.json")
+    print("=" * 60)
 
 
 if __name__ == "__main__":
