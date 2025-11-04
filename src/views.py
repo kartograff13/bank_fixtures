@@ -5,8 +5,13 @@ from typing import Any
 import pandas as pd
 import requests
 
-from src.utils import (filter_transactions_by_date, get_api_key, get_date_range, get_greeting_by_time,
-                       load_user_settings)
+from src.utils import (
+    filter_transactions_by_date,
+    get_api_key,
+    get_date_range,
+    get_greeting_by_time,
+    load_user_settings,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -90,7 +95,6 @@ def get_stock_prices(stocks: list[str]) -> list[dict[str, Any]]:
                 prices_list.append({"stock": stock, "price": price_value})
             else:
                 logger.warning(f"Ошибка получения цены {stock}: {data.get(stock, 'Нет данных')}")
-                # Используем заглушку
                 prices_list.append({"stock": stock, "price": get_fallback_stock_price(stock)})
                 continue
 
