@@ -1,6 +1,5 @@
 # Bank Fixtures - Анализ банковских операций
-### Проект для анализа банковских транзакций с генерацией отчетов, 
-### аналитикой расходов и интеграцией с финансовыми API.
+### Проект для анализа банковских транзакций с генерацией отчетов, аналитикой расходов и интеграцией с финансовыми API.
 
 ## 📊 Функциональность
 ### Основные модули
@@ -51,7 +50,7 @@ poetry shell
 - Формат данных должен соответствовать структуре Тинькофф банка
 
 2. Настройте пользовательские предпочтения в user_settings.json:
-```commandline
+```
 {
   "user_currencies": ["USD", "EUR"],
   "user_stocks": ["AAPL", "AMZN", "GOOGL", "MSFT", "TSLA"]
@@ -73,7 +72,7 @@ python src/main.py
 
 ### Отдельные модули
 #### Генерация отчетов
-```commandline
+```
 from src.reports import spending_by_category, spending_by_weekday
 
 # Отчет по категориям
@@ -83,7 +82,7 @@ report = spending_by_category(transactions_df, "Супермаркеты", "2021
 weekday_report = spending_by_weekday(transactions_df, "2021-12-31")
 ```
 #### Аналитические сервисы
-```commandline
+```
 from src.services import profitable_cashback_categories, investment_bank
 
 # Анализ кешбэка
@@ -93,7 +92,7 @@ cashback = profitable_cashback_categories(transactions, 2021, 12)
 investment = investment_bank("2021-12", transactions, 10)
 ```
 #### Представления для веб-интерфейса
-```commandline
+```
 from src.views import main_page_data, events_page_data
 
 # Данные для главной страницы
@@ -140,7 +139,7 @@ events_data = events_page_data(transactions_df, "2021-12-31 23:59:59", "M")
 
 ## 🧪 Тестирование
 ### Запуск тестов:
-```commandline
+```
 # Базовый запуск тестов
 python -m pytest tests/
 
@@ -152,7 +151,7 @@ python -m pytest tests/test_utils.py
 ```
 ### Покрытие кода
 #### Проект настроен для измерения покрытия кода тестами:
-```commandline
+```
 # Генерация отчета о покрытии в консоли
 pytest --cov=src
 
